@@ -8,6 +8,7 @@ extern "C" {
 #include "user_interface.h"
 }
 #include <FS.h>
+#include <LittleFS.h>
 #include <TimeLib.h>
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
@@ -16,10 +17,22 @@ extern "C" {
 #include <WiFiUdp.h>
 #include <Ticker.h>
 #include <DNSServer.h>
+
+#if defined(ARDUINO_ARCH_ESP8266)
+#include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#include <WebServer.h>
+#endif
+#include <PageBuilder.h>
+#if defined(ARDUINO_ARCH_ESP8266)
+ESP8266WebServer  server;
+#elif defined(ARDUINO_ARCH_ESP32)
+WebServer  server;
+#endif
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
-#include <PageBuilder.h> 
 
 const char ver[]="0.01";
 char hostname[11]="rfpm2";
@@ -44,8 +57,8 @@ int i,j;
 bool tick1Occured,timeset;
 const int timeZone=0;
 static const char ntpServerName[]="pool.ntp.org";
-ESP8266WebServer server;
-LiquidCrystal_I2C lcd(0x20,4,5,6,0,1,2,3,7,NEGATIVE);  //set the LCD I2C address
+
+LiquidCrystal_I2C lcd(0x20,4,5,6,0,1,2,3);  //set the LCD I2C address
 LcdBarGraphX lbg(&lcd,lcdNumCols);
 WiFiUDP udp;
 String header; //HTTP request
@@ -122,10 +135,10 @@ int config(const char* cfgfile){
   StaticJsonDocument<1000> doc; //on stack  arduinojson.org/assistant
     Serial.println("config file");
     Serial.println(cfgfile);
-  if (SPIFFS.exists(cfgfile)) {
+  if (LittleFS.exists(cfgfile)) {
     //file exists, reading and loading
     Serial.println("Reading config file");
-    File configFile=SPIFFS.open(cfgfile,"r");
+    File configFile=LittleFS.open(cfgfile,"r");
     if (configFile){
       resulti=0;
       resultn=0;
@@ -166,7 +179,7 @@ int config(const char* cfgfile){
 //----------------------------------------------------------------------------------
 String rootPage(PageArgument& args) {
   String buf;
-  char line[100];
+  char line[300];
 
   sprintf(line,"<h3><a href=\"/config\">Configuration</a>: %s</h3><p>Time: %s Value: %0.1f %s\n<pre>",name,ts,db,unit);
   buf=line;
@@ -183,14 +196,14 @@ String rootPage(PageArgument& args) {
 String cfgPage(PageArgument& args) {
   String filename;
   String buf;
-  char line[60];
+  char line[200];
 
   if (args.hasArg("filename")){
     if(!config(args.arg("filename").c_str())) buf+="<p>Done...";
     else buf+="<p>Config failed...";
   }
   else{
-    Dir dir = SPIFFS.openDir("/");
+    Dir dir = LittleFS.openDir("/");
     buf="<h3>Click on desired configuration file:</h3>";
     while (dir.next()){
       filename=dir.fileName();
@@ -270,7 +283,7 @@ void setup(){
   Serial.print(ESP.getFreeSketchSpace());
   Serial.print("\n\n");
     
-  if (SPIFFS.begin()){
+  if (LittleFS.begin()){
     Serial.println("Mounted file system");
     config("/default.cfg");
   }
