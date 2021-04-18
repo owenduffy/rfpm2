@@ -48,7 +48,7 @@ float slope=0.1;
 int avg=3;
 char unit[9]="";
 int lcdfsd=0;
-char name[21];
+char name[21],configfilename[32];
 float db;
 char result1[RESULTL][21]; //timestamp array
 float result2[RESULTL]; //db array
@@ -135,7 +135,7 @@ int config(const char* cfgfile){
   StaticJsonDocument<1000> doc; //on stack  arduinojson.org/assistant
     Serial.println("config file");
     Serial.println(cfgfile);
-  if (LittleFS.exists(cfgfile)) {
+  if (LittleFS.exists(cfgfile)){
     //file exists, reading and loading
     Serial.println("Reading config file");
     File configFile=LittleFS.open(cfgfile,"r");
@@ -199,6 +199,13 @@ String cfgPage(PageArgument& args) {
   char line[200];
 
   if (args.hasArg("filename")){
+    File mruFile=LittleFS.open("/mru.txt","w");
+    if(mruFile){
+      mruFile.print(args.arg("filename").c_str());
+      mruFile.close();
+      Serial.print("wrote: ");
+      Serial.println(args.arg("filename").c_str());
+    }
     if(!config(args.arg("filename").c_str())) buf+="<p>Done...";
     else buf+="<p>Config failed...";
   }
@@ -285,7 +292,18 @@ void setup(){
     
   if (LittleFS.begin()){
     Serial.println("Mounted file system");
-    config("/default.cfg");
+    strcpy(configfilename,"/default.cfg");
+    File mruFile=LittleFS.open("/mru.txt","r");
+    if(mruFile){
+    Serial.println("Trace1");
+      size_t mrusize=mruFile.size();
+      std::unique_ptr<char[]> buf(new char[mrusize]);
+      mruFile.readBytes(buf.get(),mrusize);
+      mruFile.close();
+      strncpy(configfilename,buf.get(),mrusize);
+      configfilename[mrusize]='\0';
+    }
+    config(configfilename);
   }
   else{
     Serial.println("Failed to mount FS");
@@ -368,11 +386,9 @@ void loop(){
     strcpy(result1[resulti],ts);
     if(++resulti==RESULTL){resulti=0;}
     if(resultn<RESULTL){resultn++;}
-    if(Serial.available()<=0){
-      Serial.print(ts);
-      Serial.print(",");
-      Serial.println(db,1);
-      }
+    Serial.print(ts);
+    Serial.print(",");
+    Serial.println(db,1);
 
     // Print a message to the LCD.
     lbg.drawValue((db-lcdfsd+96)/2,48);//2.0dB per step
