@@ -137,7 +137,12 @@ int config(const char* cfgfile){
     Serial.println(cfgfile);
   if (LittleFS.exists(cfgfile)){
     //file exists, reading and loading
+    lcd.clear();
+    lcd.print("Loading config: ");
+    lcd.setCursor(0,1);
+    lcd.print(cfgfile);
     Serial.println("Reading config file");
+    delay(1000);
     File configFile=LittleFS.open(cfgfile,"r");
     if (configFile){
       resulti=0;
