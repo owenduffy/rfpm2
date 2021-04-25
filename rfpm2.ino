@@ -342,11 +342,6 @@ void setup(){
 //  lcd.print(WiFi.SSID());
   delay(2000);
   
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  
   // Prepare dynamic web page
   page.exitCanHandle(handleAcs);    // Handles for all requests.
   page.insert(server);
