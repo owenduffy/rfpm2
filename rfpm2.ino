@@ -326,44 +326,47 @@ void setup(){
 //  WiFi.mode(WIFI_STA);
   wifiManager.setDebugOutput(true);
   wifiManager.setHostname(hostname);
-  wifiManager.autoConnect("rfpmcfg");
+  wifiManager.setConfigPortalTimeout(120);
   Serial.println("Connecting...");
   Serial.print(WiFi.hostname());
   Serial.print(" connecting to ");
   Serial.println(WiFi.SSID());
-  lcd.clear();
-  lcd.print("Host: ");
-  lcd.print(WiFi.hostname());
-//  lcd.print("Connecting...");
-  lcd.setCursor(0,1);
-//  lcd.print("IP: ");
-  lcd.print(WiFi.localIP().toString().c_str());
-//  lcd.print(" connecting to ");
-//  lcd.print(WiFi.SSID());
-  delay(2000);
+  wifiManager.autoConnect("rfpmcfg");
+  if(WiFi.status()==WL_CONNECTED){
+    lcd.clear();
+    lcd.print("Host: ");
+    lcd.print(WiFi.hostname());
+  //  lcd.print("Connecting...");
+    lcd.setCursor(0,1);
+  //  lcd.print("IP: ");
+    lcd.print(WiFi.localIP().toString().c_str());
+    Serial.println(WiFi.localIP().toString().c_str());
+  //  lcd.print(" connecting to ");
+  //  lcd.print(WiFi.SSID());
+    delay(2000);
   
-  // Prepare dynamic web page
-  page.exitCanHandle(handleAcs);    // Handles for all requests.
-  page.insert(server);
+    // Prepare dynamic web page
+    page.exitCanHandle(handleAcs);    // Handles for all requests.
+    page.insert(server);
   
-  // Print local IP address and start web server
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-  Serial.println("Hostname: ");
-  Serial.println(WiFi.hostname());
-  server.begin();
+    // Print local IP address and start web server
+    Serial.println("");
+    Serial.println("WiFi connected.");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+    Serial.println("Hostname: ");
+    Serial.println(WiFi.hostname());
+    server.begin();
 
-  Serial.println("Starting UDP");
-  udp.begin(localPort);
-  Serial.print("Local port: ");
-  Serial.println(udp.localPort());
-  Serial.println("waiting for sync");
-  setSyncProvider(getNtpTime);
-  timeset=timeStatus()==timeSet;
-  setSyncInterval(36000);
-
+    Serial.println("Starting UDP");
+    udp.begin(localPort);
+    Serial.print("Local port: ");
+    Serial.println(udp.localPort());
+    Serial.println("waiting for sync");
+    setSyncProvider(getNtpTime);
+    timeset=timeStatus()==timeSet;
+    setSyncInterval(36000);
+  }
   ticker1.attach(1,cbtick1);
   lcd.clear();
   Serial.print("DateTime, ");
