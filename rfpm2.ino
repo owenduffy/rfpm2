@@ -323,7 +323,6 @@ void setup(){
   lcd.clear();
   lcd.print("Auto WiFi...");
   WiFi.hostname(hostname);
-//  WiFi.mode(WIFI_STA);
   wifiManager.setDebugOutput(true);
   wifiManager.setHostname(hostname);
   wifiManager.setConfigPortalTimeout(120);
