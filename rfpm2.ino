@@ -34,7 +34,7 @@ WebServer  server;
 #include <ArduinoJson.h>
 
 #define LCDTYPE 1
-const char ver[]="0.01";
+const char ver[]="0.02";
 char hostname[11]="rfpm2";
 WiFiManager wifiManager;
 int t=0;
@@ -284,6 +284,7 @@ bool handleAcs(HTTPMethod method, String uri) {
 
 void setup(){
   WiFi.mode(WIFI_OFF);
+  WiFi.setOutputPower(0); //min power for ADC noise reduction
   lcd.begin(16,2);
   lcd.clear();
   lcd.setCursor(0,0);
