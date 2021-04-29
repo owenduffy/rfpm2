@@ -192,7 +192,7 @@ String rootPage(PageArgument& args) {
   String buf;
   char line[300];
 
-  sprintf(line,"<h3><a href=\"/config\">Configuration</a>: %s</h3><p>Time: %s Value: %0.1f %s\n<pre>",name,ts,db,unit);
+  sprintf(line,"<h3><a href=\"/config\">Configuration</a>: %s</h3><p>Time: %s Value: %0.1f %s\n<pre>\n",name,ts,db,unit);
   buf=line;
   i=resultn<RESULTL?0:resulti;
   for(j=-resultn+1;j<=0;j++){
