@@ -1,1 +1,1 @@
-/default.cfg
+default.cfg
