@@ -224,6 +224,7 @@ String cfgPage(PageArgument& args) {
   String filename((char *)0);
   char line[200];
 
+  buf.reserve(PAGEBUFRESSIZE);
   if (args.hasArg(F("filename"))){
     File mruFile=LittleFS.open("/mru.txt","w");
     if(mruFile){
@@ -236,15 +237,17 @@ String cfgPage(PageArgument& args) {
     else buf+=F("<p>Config failed...");
   }
   else{
-    Dir dir = LittleFS.openDir("/");
+    Dir dir = LittleFS.openDir(F("/"));
     buf=F("<h3>Click on desired configuration file:</h3>");
     while (dir.next()){
-      filename=dir.fileName();
-      if (filename.endsWith(".cfg")){
-        Serial.print(filename);
-        sprintf(line,"<p><a href=\"/config?filename=%s\">%s</a>\n",filename.c_str(),filename.c_str());
-        buf+=line;
-       }
+      if (dir.isFile()){
+        filename=dir.fileName();
+        if (filename.endsWith(F(".cfg"))){
+          Serial.println(filename);
+          sprintf(line,"<p><a href=\"/config?filename=%s\">%s</a>\n",filename.c_str(),filename.c_str());
+          buf+=line;
+        }
+      }
     }
   }
   return buf;
@@ -318,7 +321,7 @@ bool handleAcs(HTTPMethod method, String uri) {
 void setup(){
   WiFi.mode(WIFI_OFF);
   //WiFi.setOutputPower 0-20.5 dBm in 0.25 increments
-  WiFi.setOutputPower(0); //min power for ADC noise reduction
+  //WiFi.setOutputPower(0); //min power for ADC noise reduction
   lcd.begin(16,2);
   lcd.clear();
   lcd.print(F("rfpm2 v"));
