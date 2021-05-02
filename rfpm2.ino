@@ -284,7 +284,8 @@ bool handleAcs(HTTPMethod method, String uri) {
 
 void setup(){
   WiFi.mode(WIFI_OFF);
-//  WiFi.setOutputPower(0); //min power for ADC noise reduction
+  //WiFi.setOutputPower 0-20.5 dBm in 0.25 increments
+  WiFi.setOutputPower(0); //min power for ADC noise reduction
   lcd.begin(16,2);
   lcd.clear();
   lcd.setCursor(0,0);
