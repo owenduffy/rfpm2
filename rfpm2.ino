@@ -34,6 +34,7 @@ WebServer  server;
 #include <WiFiManager.h>
 #define ARDUINOJSON_USE_DOUBLE 1
 #include <ArduinoJson.h>
+#define LCDSTEPS 48
 
 #define LCDTYPE 1
 const char ver[]="0.02";
@@ -49,8 +50,8 @@ float vref=3.3;
 float intercept=-84;
 float slope=0.1;
 int avg=3;
+float lcdmin,lcdmax,lcdslope;
 char unit[9]="";
-int lcdfsd=0;
 char name[21],configfilename[32];
 float db;
 char result1[RESULTL][21]; //timestamp array
@@ -178,6 +179,9 @@ int config(const char* cfgfile){
       strncpy(hostname,json[F("hostname")],11);
       hostname[10]='\0';
       Serial.println(hostname);
+      lcdmin=json[F("lcdmin")];
+      lcdmax=json[F("lcdmax")];
+      lcdslope=LCDSTEPS/(lcdmax-lcdmin);
       vref=json[F("vref")];
       slope=json[F("slope")];
       intercept=json[F("intercept")];
@@ -185,7 +189,6 @@ int config(const char* cfgfile){
       strncpy(unit,json[F("unit")],sizeof(unit));
       strncpy(name,json[F("name")],sizeof(name));
       unit[sizeof(unit)-1]='\0';
-      lcdfsd=json[F("lcdfsd")];
       Serial.print(F("Slope: "));
       Serial.print(slope,5);
       Serial.print(F(", Intercept: "));
@@ -434,7 +437,7 @@ void loop(){
     Serial.print(F(","));
     Serial.println(db,1);
     // Print a message to the LCD.
-    lbg.drawValue((db-lcdfsd+96)/2,48);//2.0dB per step
+    lbg.drawValue((db-lcdmin)*lcdslope,LCDSTEPS);
     lcd.setCursor(0,1);
     lcd.print(ts2);
     lcd.print(F(" "));
