@@ -88,18 +88,18 @@ time_t getNtpTime()
   IPAddress ntpServerIP; // NTP server's ip address
 
   while(udp.parsePacket() > 0); //discard any previously received packets
-  Serial.println("Transmit NTP Request");
+  Serial.println(F("Transmit NTP Request"));
   // get a random server from the pool
   WiFi.hostByName(ntpServerName,ntpServerIP);
   Serial.print(ntpServerName);
-  Serial.print(": ");
+  Serial.print(F(": "));
   Serial.println(ntpServerIP);
   sendNTPpacket(ntpServerIP);
   uint32_t beginWait=millis();
   while (millis()-beginWait<1500) {
     int size=udp.parsePacket();
     if(size>=NTP_PACKET_SIZE){
-      Serial.println("Received NTP response");
+      Serial.println(F("Received NTP response"));
       udp.read(packetBuffer,NTP_PACKET_SIZE); //read packet into the buffer
       unsigned long secsSince1900;
       // convert four bytes starting at location 40 to a long integer
@@ -110,7 +110,7 @@ time_t getNtpTime()
       return secsSince1900-2208988800UL+timeZone*SECS_PER_HOUR;
     }
   }
-  Serial.println("No NTP response");
+  Serial.println(F("No NTP response"));
   return 0; //return 0 if unable to get the time
 }
 
@@ -139,48 +139,48 @@ void sendNTPpacket(IPAddress &address)
 //----------------------------------------------------------------------------------
 int config(const char* cfgfile){
   StaticJsonDocument<1000> doc; //on stack  arduinojson.org/assistant
-    Serial.println("config file");
+    Serial.println(F("config file"));
     Serial.println(cfgfile);
   if (LittleFS.exists(cfgfile)){
     //file exists, reading and loading
     lcd.clear();
-    lcd.print("Loading config: ");
+    lcd.print(F("Loading config: "));
     lcd.setCursor(0,1);
     lcd.print(cfgfile);
-    Serial.println("Reading config file");
+    Serial.println(F("Reading config file"));
     delay(1000);
     File configFile=LittleFS.open(cfgfile,"r");
     if (configFile){
       resulti=0;
       resultn=0;
-      Serial.println("Opened config file");
+      Serial.println(F("Opened config file"));
       size_t size=configFile.size();
       // Allocate a buffer to store contents of the file.
       std::unique_ptr<char[]> buf(new char[size]);
       configFile.readBytes(buf.get(),size);
       DeserializationError error = deserializeJson(doc, buf.get());
       if (error) {
-          Serial.println("Failed to load JSON config");
+          Serial.println(F("Failed to load JSON config"));
           lcd.clear();
-          lcd.print("Error: cfg.json");
+          lcd.print(F("Error: cfg.json"));
           while(1);
       }
       JsonObject json = doc.as<JsonObject>();
-      Serial.println("\nParsed json");
-      strncpy(hostname,json["hostname"],11);
+      Serial.println(F("\nParsed json"));
+      strncpy(hostname,json[F("hostname")],11);
       hostname[10]='\0';
       Serial.println(hostname);
-      vref=json["vref"];
-      slope=json["slope"];
-      intercept=json["intercept"];
-      avg=json["avg"];
-      strncpy(unit,json["unit"],sizeof(unit));
-      strncpy(name,json["name"],sizeof(name));
+      vref=json[F("vref")];
+      slope=json[F("slope")];
+      intercept=json[F("intercept")];
+      avg=json[F("avg")];
+      strncpy(unit,json[F("unit")],sizeof(unit));
+      strncpy(name,json[F("name")],sizeof(name));
       unit[sizeof(unit)-1]='\0';
-      lcdfsd=json["lcdfsd"];
-      Serial.print("Slope: ");
+      lcdfsd=json[F("lcdfsd")];
+      Serial.print(F("Slope: "));
       Serial.print(slope,5);
-      Serial.print(", Intercept: ");
+      Serial.print(F(", Intercept: "));
       Serial.println(intercept,5);
       return 0;
     }
@@ -200,7 +200,7 @@ String rootPage(PageArgument& args) {
     buf+=line;
     if(++i==RESULTL){i=0;}
   }
-  buf+="</pre>";
+  buf+=F("</pre>");
   return buf;
 }
 //----------------------------------------------------------------------------------
@@ -209,20 +209,20 @@ String cfgPage(PageArgument& args) {
   String buf;
   char line[200];
 
-  if (args.hasArg("filename")){
+  if (args.hasArg(F("filename"))){
     File mruFile=LittleFS.open("/mru.txt","w");
     if(mruFile){
-      mruFile.print(args.arg("filename").c_str());
+      mruFile.print(args.arg(F("filename")).c_str());
       mruFile.close();
-      Serial.print("wrote: ");
-      Serial.println(args.arg("filename").c_str());
+      Serial.print(F("wrote: "));
+      Serial.println(args.arg(F("filename")).c_str());
     }
-    if(!config(args.arg("filename").c_str())) buf+="<p>Done...";
-    else buf+="<p>Config failed...";
+    if(!config(args.arg(F("filename")).c_str())) buf+=F("<p>Done...");
+    else buf+=F("<p>Config failed...");
   }
   else{
     Dir dir = LittleFS.openDir("/");
-    buf="<h3>Click on desired configuration file:</h3>";
+    buf=F("<h3>Click on desired configuration file:</h3>");
     while (dir.next()){
       filename=dir.fileName();
       if (filename.endsWith(".cfg")){
@@ -289,21 +289,21 @@ void setup(){
   lcd.begin(16,2);
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("RFPM2 v");
+  lcd.print(F("RFPM2 v"));
   lcd.print(ver);
   lcd.setCursor(0,1);
-  lcd.print("Initialising...");
+  lcd.print(F("Initialising..."));
 
   Serial.begin(9600);
   while (!Serial){;} // wait for serial port to connect. Needed for Leonardo only
-  Serial.print("\nSketch size: ");
+  Serial.print(F("\nSketch size: "));
   Serial.print(ESP.getSketchSize());
-  Serial.print("\nFree size: ");
+  Serial.print(F("\nFree size: "));
   Serial.print(ESP.getFreeSketchSpace());
-  Serial.print("\n\n");
+  Serial.print(F("\n\n"));
     
   if (LittleFS.begin()){
-    Serial.println("Mounted file system");
+    Serial.println(F("Mounted file system"));
     strcpy(configfilename,"/default.cfg");
     File mruFile=LittleFS.open("/mru.txt","r");
     if(mruFile){
@@ -317,32 +317,32 @@ void setup(){
     config(configfilename);
   }
   else{
-    Serial.println("Failed to mount FS");
+    Serial.println(F("Failed to mount FS"));
     lcd.clear();
-    lcd.print("Failed to mount FS");
+    lcd.print(F("Failed to mount FS"));
     while(1);
   }
   lcd.clear();
-  lcd.print("Auto WiFi...");
+  lcd.print(F("Auto WiFi..."));
   WiFi.hostname(hostname);
   wifiManager.setDebugOutput(true);
   wifiManager.setHostname(hostname);
   wifiManager.setConfigPortalTimeout(120);
-  Serial.println("Connecting...");
+  Serial.println(F("Connecting..."));
   Serial.print(WiFi.hostname());
-  Serial.print(" connecting to ");
+  Serial.print(F(" connecting to "));
   Serial.println(WiFi.SSID());
   wifiManager.autoConnect("rfpmcfg");
   if(WiFi.status()==WL_CONNECTED){
     lcd.clear();
-    lcd.print("Host: ");
+    lcd.print(F("Host: "));
     lcd.print(WiFi.hostname());
-  //  lcd.print("Connecting...");
+  //  lcd.print(F("Connecting..."));
     lcd.setCursor(0,1);
-  //  lcd.print("IP: ");
+  //  lcd.print(F("IP: "));
     lcd.print(WiFi.localIP().toString().c_str());
     Serial.println(WiFi.localIP().toString().c_str());
-  //  lcd.print(" connecting to ");
+  //  lcd.print(F(" connecting to "));
   //  lcd.print(WiFi.SSID());
     delay(2000);
   
@@ -351,26 +351,26 @@ void setup(){
     page.insert(server);
   
     // Print local IP address and start web server
-    Serial.println("");
-    Serial.println("WiFi connected.");
-    Serial.println("IP address: ");
+    Serial.println(F(""));
+    Serial.println(F("WiFi connected."));
+    Serial.println(F("IP address: "));
     Serial.println(WiFi.localIP());
-    Serial.println("Hostname: ");
+    Serial.println(F("Hostname: "));
     Serial.println(WiFi.hostname());
     server.begin();
 
-    Serial.println("Starting UDP");
+    Serial.println(F("Starting UDP"));
     udp.begin(localPort);
-    Serial.print("Local port: ");
+    Serial.print(F("Local port: "));
     Serial.println(udp.localPort());
-    Serial.println("waiting for sync");
+    Serial.println(F("waiting for sync"));
     setSyncProvider(getNtpTime);
     timeset=timeStatus()==timeSet;
     setSyncInterval(36000);
   }
   ticker1.attach(1,cbtick1);
   lcd.clear();
-  Serial.print("DateTime, ");
+  Serial.print(F("DateTime, "));
   Serial.println(unit);
 }
 
@@ -397,16 +397,16 @@ void loop(){
     if(++resulti==RESULTL){resulti=0;}
     if(resultn<RESULTL){resultn++;}
     Serial.print(ts);
-    Serial.print(",");
+    Serial.print(F(","));
     Serial.println(db,1);
 
     // Print a message to the LCD.
     lbg.drawValue((db-lcdfsd+96)/2,48);//2.0dB per step
     lcd.setCursor(0,1);
     lcd.print(ts2);
-    lcd.print(" ");
+    lcd.print(F(" "));
     lcd.print(db,1);
-    lcd.print(" dB      ");
+    lcd.print(F(" dB      "));
   }
   
   server.handleClient();
