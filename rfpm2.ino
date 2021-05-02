@@ -4,6 +4,7 @@
 //I2C LCD
 
 #define RESULTL 50
+#define PAGEBUFRESSIZE 3000
 extern "C" {
 #include "user_interface.h"
 }
@@ -31,6 +32,7 @@ ESP8266WebServer  server;
 WebServer  server;
 #endif
 #include <WiFiManager.h>
+#define ARDUINOJSON_USE_DOUBLE 1
 #include <ArduinoJson.h>
 
 #define LCDTYPE 1
@@ -40,7 +42,7 @@ WiFiManager wifiManager;
 int t=0;
 byte lcdNumCols=16;
 int sensorPin=A0; // select the input pin for the AD8307
-unsigned AdcAccumulator; // variable to accumulate the value coming from the sensor
+long unsigned AdcAccumulator; // variable to accumulate the value coming from the sensor
 float vin;
 float rt;
 float vref=3.3;
@@ -137,14 +139,20 @@ void sendNTPpacket(IPAddress &address)
   udp.endPacket();
 }
 //----------------------------------------------------------------------------------
+void lcdrst(){
+  lcd.clear(); //clear lcd screen
+  lbg.begin(); //restart LCD bar graph
+}
+//----------------------------------------------------------------------------------
 int config(const char* cfgfile){
-  StaticJsonDocument<1000> doc; //on stack  arduinojson.org/assistant
-    Serial.println(F("config file"));
-    Serial.println(cfgfile);
+//  StaticJsonDocument<2000> doc; //on stack  arduinojson.org/assistant
+  DynamicJsonDocument doc(1024);//arduinojson.org/assistant
+  Serial.println(F("config file"));
+  Serial.println(cfgfile);
   if (LittleFS.exists(cfgfile)){
     //file exists, reading and loading
     lcd.clear();
-    lcd.print(F("Loading config: "));
+    lcd.print(F("Loading config:       "));
     lcd.setCursor(0,1);
     lcd.print(cfgfile);
     Serial.println(F("Reading config file"));
@@ -182,18 +190,25 @@ int config(const char* cfgfile){
       Serial.print(slope,5);
       Serial.print(F(", Intercept: "));
       Serial.println(intercept,5);
+      lcd.clear();
+      lbg.begin(); //restart LCD bar graph
+      lcdrst();
       return 0;
     }
   }
+  lcdrst();
   return 1;
 }
 //----------------------------------------------------------------------------------
 String rootPage(PageArgument& args) {
-  String buf;
+  String buf((char *)0);
   char line[300];
-
-  sprintf(line,"<h3><a href=\"/config\">Configuration</a>: %s</h3><p>Time: %s Value: %0.1f %s\n<pre>\n",name,ts,db,unit);
+  buf.reserve(PAGEBUFRESSIZE);
+  sprintf(line,"<h3><a href=\"/config\">Configuration</a>: %s</h3>\n",name);
   buf=line;
+  buf+=F("<h3><a href=\"/wifi\">WiFi OFF</a></h3>\n");
+  sprintf(line,"<p>Time: %s Value: %0.1f %s\n<pre>\n",name,ts,db,unit);
+  buf+=line;
   i=resultn<RESULTL?0:resulti;
   for(j=-resultn+1;j<=0;j++){
     sprintf(line,"%s,%0.1f\n",result1[i],result2[i]);
@@ -205,8 +220,8 @@ String rootPage(PageArgument& args) {
 }
 //----------------------------------------------------------------------------------
 String cfgPage(PageArgument& args) {
-  String filename;
-  String buf;
+  String buf((char *)0);
+  String filename((char *)0);
   char line[200];
 
   if (args.hasArg(F("filename"))){
@@ -234,6 +249,12 @@ String cfgPage(PageArgument& args) {
   }
   return buf;
 }  
+//----------------------------------------------------------------------------------
+String wifiPage(PageArgument& args) {
+  Serial.println(F("WiFi OFF"));
+  WiFi.mode(WIFI_OFF);
+  return F("");
+}
 //----------------------------------------------------------------------------------
 // This function creates dynamic web page by each request.
 // It is called twice at one time URI request that caused by the structure
@@ -275,25 +296,35 @@ bool handleAcs(HTTPMethod method, String uri) {
       elm.addToken("CONFIG",cfgPage);
       return true;
     }
+    else if(uri=="/wifi"){
+      page.setUri(uri.c_str());
+      elm.setMold(PSTR(
+        "<html>"
+        "<body>"
+        "<h1><a href=/>RF power meter 2 (RFPM2)</a></h1>"
+        "<h2>wifi configuration</h2>"
+        "{{WIFI}}"
+        "</body>"
+        "</html>"));
+      elm.addToken("WIFI",wifiPage);
+      return true;
+    }
     else{
       return false;    // Not found to accessing exception URI.
     }
   }
 }
 //----------------------------------------------------------------------------------
-
 void setup(){
   WiFi.mode(WIFI_OFF);
   //WiFi.setOutputPower 0-20.5 dBm in 0.25 increments
   WiFi.setOutputPower(0); //min power for ADC noise reduction
   lcd.begin(16,2);
   lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print(F("RFPM2 v"));
+  lcd.print(F("rfpm2 v"));
   lcd.print(ver);
   lcd.setCursor(0,1);
   lcd.print(F("Initialising..."));
-
   Serial.begin(9600);
   while (!Serial){;} // wait for serial port to connect. Needed for Leonardo only
   Serial.print(F("\nSketch size: "));
@@ -369,7 +400,7 @@ void setup(){
     setSyncInterval(36000);
   }
   ticker1.attach(1,cbtick1);
-  lcd.clear();
+  lcdrst();
   Serial.print(F("DateTime, "));
   Serial.println(unit);
 }
@@ -399,7 +430,6 @@ void loop(){
     Serial.print(ts);
     Serial.print(F(","));
     Serial.println(db,1);
-
     // Print a message to the LCD.
     lbg.drawValue((db-lcdfsd+96)/2,48);//2.0dB per step
     lcd.setCursor(0,1);
