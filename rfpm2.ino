@@ -57,7 +57,7 @@ float db;
 char result1[RESULTL][21]; //timestamp array
 float result2[RESULTL]; //db array
 int resulti,resultn;
-int i,j;
+int i,j,ticks,interval;
 bool tick1Occured,timeset;
 const int timeZone=0;
 static const char ntpServerName[]="pool.ntp.org";
@@ -78,10 +78,15 @@ PageBuilder  page;
 String currentUri;
 char ts[21],ts2[7];
 
+//----------------------------------------------------------------------------------
 void cbtick1(){
-  tick1Occured=true;
+  if(ticks)
+    ticks--;
+  else{
+    ticks=interval-1;
+    tick1Occured=true;
+  }
 }
-
 //----------------------------------------------------------------------------------
 const int NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
 byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
@@ -143,6 +148,8 @@ void sendNTPpacket(IPAddress &address)
 void lcdrst(){
   lcd.clear(); //clear lcd screen
   lbg.begin(); //restart LCD bar graph
+  ticks=interval-1;
+  tick1Occured=true;
 }
 //----------------------------------------------------------------------------------
 int config(const char* cfgfile){
@@ -183,6 +190,8 @@ int config(const char* cfgfile){
       lcdmax=json[F("lcdmax")];
       lcdslope=LCDSTEPS/(lcdmax-lcdmin);
       vref=json[F("vref")];
+      interval=1; //default
+      vref=json[F("interval")];
       slope=json[F("slope")];
       intercept=json[F("intercept")];
       avg=json[F("avg")];
@@ -193,8 +202,6 @@ int config(const char* cfgfile){
       Serial.print(slope,5);
       Serial.print(F(", Intercept: "));
       Serial.println(intercept,5);
-      lcd.clear();
-      lbg.begin(); //restart LCD bar graph
       lcdrst();
       return 0;
     }
