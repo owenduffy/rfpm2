@@ -21,23 +21,24 @@ extern "C" {
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+ESP8266WebServer  server;
+#include <ESP8266mDNS.h>
 #elif defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
 #include <WebServer.h>
-#endif
-#include <PageBuilder.h>
-#if defined(ARDUINO_ARCH_ESP8266)
-ESP8266WebServer  server;
-#elif defined(ARDUINO_ARCH_ESP32)
 WebServer  server;
+#include <ESPmDNS.h>
 #endif
-#include <WiFiManager.h>
 #define ARDUINOJSON_USE_DOUBLE 1
 #include <ArduinoJson.h>
+#include <PageBuilder.h>
+#include <WiFiManager.h>
+
+#include <UrlEncode.h>
 #define LCDSTEPS 48
 
 #define LCDTYPE 1
-const char ver[]="0.02";
+const char ver[]="0.03";
 char hostname[11]="rfpm2";
 WiFiManager wifiManager;
 int t=0;
@@ -178,7 +179,7 @@ int config(const char* cfgfile){
       if (error) {
           Serial.println(F("Failed to load JSON config"));
           lcd.clear();
-          lcd.print(F("Error: cfg.json"));
+          lcd.print(F("Error: cfg json"));
           while(1);
       }
       JsonObject json = doc.as<JsonObject>();
@@ -232,18 +233,19 @@ String rootPage(PageArgument& args) {
 String cfgPage(PageArgument& args) {
   String buf((char *)0);
   String filename((char *)0);
+  String filenamee("");
   char line[200];
-
   buf.reserve(PAGEBUFRESSIZE);
   if (args.hasArg(F("filename"))){
-    File mruFile=LittleFS.open("/mru.txt","w");
+    filename=args.arg(F("filename")).c_str();
+   File mruFile=LittleFS.open("/mru.txt","w");
     if(mruFile){
-      mruFile.print(args.arg(F("filename")).c_str());
+      mruFile.print(filename);
       mruFile.close();
       Serial.print(F("wrote: "));
-      Serial.println(args.arg(F("filename")).c_str());
+      Serial.println(filename);
     }
-    if(!config(args.arg(F("filename")).c_str())) buf+=F("<p>Done...");
+    if(!config(filename.c_str())) buf+=F("<p>Done...");
     else buf+=F("<p>Config failed...");
   }
   else{
@@ -252,9 +254,9 @@ String cfgPage(PageArgument& args) {
     while (dir.next()){
       if (dir.isFile()){
         filename=dir.fileName();
-        if (filename.endsWith(F(".cfg"))){
-          Serial.println(filename);
-          sprintf(line,"<p><a href=\"/config?filename=%s\">%s</a>\n",filename.c_str(),filename.c_str());
+        if (filename.endsWith(F(".json"))){
+          filenamee=urlEncode(filename);
+          sprintf(line,"<p><a href=\"/config?filename=%s\">%s</a>\n",filenamee.c_str(),filename.c_str());
           buf+=line;
         }
       }
@@ -279,14 +281,14 @@ bool handleAcs(HTTPMethod method, String uri) {
   }
   else{
     currentUri=uri;
-    page.clearElement();          // Discards the remains of PageElement.
+    page.clearElements();         // Discards the remains of PageElement.
     page.addElement(elm);         // Register PageElement for current access.
 
     Serial.println("Request:" + uri);
 
     if(uri=="/"){
       page.setUri(uri.c_str());
-      elm.setMold(PSTR(
+      elm.setMold(F(
         "<html>"
         "<body>"
         "<h1><a href=/>RF power meter 2 (RFPM2)</a></h1>"
@@ -294,11 +296,11 @@ bool handleAcs(HTTPMethod method, String uri) {
         "</body>"
         "</html>"));
       elm.addToken("ROOT", rootPage);
-      return true;
+     return true;
     }
     else if(uri=="/config"){
       page.setUri(uri.c_str());
-      elm.setMold(PSTR(
+      elm.setMold(F(
         "<html>"
         "<body>"
         "<h1><a href=/>RF power meter 2 (RFPM2)</a></h1>"
@@ -311,7 +313,7 @@ bool handleAcs(HTTPMethod method, String uri) {
     }
     else if(uri=="/wifi"){
       page.setUri(uri.c_str());
-      elm.setMold(PSTR(
+      elm.setMold(F(
         "<html>"
         "<body>"
         "<h1><a href=/>RF power meter 2 (RFPM2)</a></h1>"
@@ -348,7 +350,7 @@ void setup(){
     
   if (LittleFS.begin()){
     Serial.println(F("Mounted file system"));
-    strcpy(configfilename,"/default.cfg");
+    strcpy(configfilename,"/default.json");
     File mruFile=LittleFS.open("/mru.txt","r");
     if(mruFile){
       size_t mrusize=mruFile.size();
@@ -401,7 +403,7 @@ void setup(){
     Serial.println(WiFi.localIP());
     Serial.println(F("Hostname: "));
     Serial.println(WiFi.hostname());
-    server.begin();
+ //   server.begin();
 
     Serial.println(F("Starting UDP"));
     udp.begin(localPort);
@@ -416,11 +418,27 @@ void setup(){
   lcdrst();
   Serial.print(F("DateTime, "));
   Serial.println(unit);
+  Serial.println(hostname);
+
+#if defined(ARDUINO_ARCH_ESP8266)
+  Serial.println(WiFi.hostname());
+#elif defined(ARDUINO_ARCH_ESP32)
+  Serial.println(WiFi.getHostname());
+#endif
+  if (!MDNS.begin(hostname)) {             // Start the mDNS responder for esp8266.local
+    Serial.println("Error setting up MDNS responder!");
+  }
+  Serial.println("mDNS responder started");
+  server.begin();
+  MDNS.addService("_http", "_tcp", 80);
 }
 
 void loop(){
   long prevmillis;
 
+#if defined(ARDUINO_ARCH_ESP8266)
+  MDNS.update();
+#endif
   prevmillis=-millis();
   if (tick1Occured == true){
     tick1Occured = false;
@@ -457,3 +475,4 @@ void loop(){
 //    if(prevmillis>20){Serial.print("dur :"); Serial.println(prevmillis);}
 
 }
+
