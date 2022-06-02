@@ -215,7 +215,7 @@ String rootPage(PageArgument& args) {
   String buf((char *)0);
   char line[300];
   buf.reserve(PAGEBUFRESSIZE);
-  sprintf(line,"<h3><a href=\"/config\">Configuration</a>: %s</h3>\n",name);
+  sprintf(line,"<h3>Version: %s, <a href=\"/config\">Configuration</a>: %s</h3>\n",ver,name);
   buf=line;
   buf+=F("<h3><a href=\"/wifi\">WiFi OFF</a></h3>\n");
   sprintf(line,"<p>Time: %s Value: %0.1f %s\n<pre>\n",name,ts,db,unit);
