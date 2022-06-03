@@ -3,6 +3,8 @@
 //Copyright: Owen Duffy 2018/04/07
 //I2C LCD
 
+#define VERSION "0.03"
+
 #define RESULTL 50
 #define PAGEBUFRESSIZE 3000
 extern "C" {
@@ -38,7 +40,7 @@ WebServer  server;
 #define LCDSTEPS 48
 
 #define LCDTYPE 1
-const char ver[]="0.03";
+const char ver[]=VERSION;
 char hostname[11]="rfpm2";
 WiFiManager wifiManager;
 int t=0;
